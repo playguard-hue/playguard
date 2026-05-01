@@ -23,13 +23,12 @@ nsis:
   oneClick: false
   allowToChangeInstallationDirectory: true
   perMachine: false
-  artifactName: PlayGuard-${version}-Setup.${ext}
+  artifactName: PlayGuard-Setup.${ext}
   shortcutName: PlayGuard
   uninstallDisplayName: PlayGuard
   createDesktopShortcut: true
   createStartMenuShortcut: true
 mac:
-  mac:
   target:
     - target: dmg
       arch:
@@ -40,10 +39,10 @@ mac:
   identity: null
   entitlementsInherit: build/entitlements.mac.plist
   extendInfo:
-    - NSMicrophoneUsageDescription: PlayGuard needs microphone access for stress detection during gameplay.
+    NSMicrophoneUsageDescription: PlayGuard needs microphone access for stress detection during gameplay.
   notarize: false
 dmg:
-  artifactName: PlayGuard-${version}.${ext}
+  artifactName: PlayGuard.${ext}
 linux:
   target:
     - AppImage
@@ -51,7 +50,7 @@ linux:
   category: Utility
   icon: build/icon.png
 appImage:
-  artifactName: PlayGuard-${version}.${ext}
+  artifactName: PlayGuard.${ext}
 npmRebuild: false
 publish:
   provider: github
