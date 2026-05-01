@@ -1,0 +1,46 @@
+appId: net.playguard.app
+productName: PlayGuard
+directories:
+  buildResources: build
+  output: dist
+files:
+  - '!**/.vscode/*'
+  - '!src/*'
+  - '!electron.vite.config.{js,ts,mjs,cjs}'
+  - '!{.eslintcache,eslint.config.mjs,.prettierignore,.prettierrc.yaml,dev-app-update.yml,CHANGELOG.md,README.md}'
+  - '!{.env,.env.*,.npmrc,pnpm-lock.yaml}'
+  - '!{tsconfig.json,tsconfig.node.json,tsconfig.web.json}'
+asarUnpack:
+  - resources/**
+win:
+  target:
+    - target: nsis
+      arch:
+        - x64
+  executableName: PlayGuard
+  icon: build/icon.ico
+nsis:
+  oneClick: false
+  allowToChangeInstallationDirectory: true
+  perMachine: false
+  artifactName: PlayGuard-${version}-Setup.${ext}
+  shortcutName: PlayGuard
+  uninstallDisplayName: PlayGuard
+  createDesktopShortcut: true
+  createStartMenuShortcut: true
+mac:
+  entitlementsInherit: build/entitlements.mac.plist
+  extendInfo:
+    - NSMicrophoneUsageDescription: PlayGuard needs microphone access for stress detection during gameplay.
+  notarize: false
+dmg:
+  artifactName: PlayGuard-${version}.${ext}
+linux:
+  target:
+    - AppImage
+  maintainer: PlayGuard
+  category: Utility
+  icon: build/icon.png
+appImage:
+  artifactName: PlayGuard-${version}.${ext}
+npmRebuild: false
