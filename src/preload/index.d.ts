@@ -83,6 +83,8 @@ export interface Api {
   app: {
     setLaunchOnStartup: (enabled: boolean) => Promise<boolean>
     getLaunchOnStartup: () => Promise<boolean>
+    getVersion: () => Promise<string>
+    checkForUpdates: () => Promise<boolean>
   }
 }
 

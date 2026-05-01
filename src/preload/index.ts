@@ -38,9 +38,10 @@ const api = {
   app: {
     setLaunchOnStartup: (enabled: boolean) =>
       ipcRenderer.invoke('app:set-launch-on-startup', enabled),
-    getLaunchOnStartup: () => ipcRenderer.invoke('app:get-launch-on-startup')
+    getLaunchOnStartup: () => ipcRenderer.invoke('app:get-launch-on-startup'),
+    getVersion: () => ipcRenderer.invoke('app:get-version'),
+    checkForUpdates: () => ipcRenderer.invoke('app:check-for-updates')
   }
-}
 
 if (process.contextIsolated) {
   try {

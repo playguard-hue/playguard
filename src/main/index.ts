@@ -269,6 +269,10 @@ app.whenReady().then(() => {
   ipcMain.handle('app:check-for-updates', () => {
     checkForUpdates()
     return true
+    
+  ipcMain.handle('app:get-version', () => {
+    return app.getVersion()
+  })
   })
 
   // ─── Window + tray ────────────────────────────────────────

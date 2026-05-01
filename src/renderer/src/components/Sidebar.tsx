@@ -1,6 +1,7 @@
 import { useAuth } from '../contexts/AuthContext'
 import type { Page } from '../App'
 import logo from '../assets/logo.png'
+import { useEffect, useState } from 'react'
 
 interface SidebarProps {
   currentPage: Page
@@ -20,7 +21,11 @@ const navItems: NavItem[] = [
 ]
 
 function Sidebar({ currentPage, onNavigate }: SidebarProps) {
-  const { user, logout } = useAuth()
+  const [version, setVersion] = useState('—')
+
+  useEffect(() => {
+    void window.api.app.getVersion().then((v) => setVersion(v))
+  }, [])
 
   return (
     <aside className="w-60 bg-bg-panel border-r border-white/5 flex flex-col">
@@ -30,7 +35,7 @@ function Sidebar({ currentPage, onNavigate }: SidebarProps) {
           <img src={logo} alt="" className="w-10 h-10 object-contain" />
           <div>
             <div className="font-semibold text-sm">PlayGuard</div>
-            <div className="text-xs text-white/40">v1.0.0</div>
+            <div className="text-xs text-white/40">v{version}</div>
           </div>
         </div>
       </div>
