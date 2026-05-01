@@ -1,7 +1,7 @@
-import { useAuth } from '../contexts/AuthContext'
-import type { Page } from '../App'
-import logo from '../assets/logo.png'
 import { useEffect, useState } from 'react'
+import { useAuth } from '../contexts/AuthContext'
+import logo from '../assets/Logo.png'
+import type { Page } from '../App'
 
 interface SidebarProps {
   currentPage: Page
@@ -21,6 +21,7 @@ const navItems: NavItem[] = [
 ]
 
 function Sidebar({ currentPage, onNavigate }: SidebarProps) {
+  const { user, logout } = useAuth()
   const [version, setVersion] = useState('—')
 
   useEffect(() => {
