@@ -25,7 +25,21 @@ function Sidebar({ currentPage, onNavigate }: SidebarProps) {
   const [version, setVersion] = useState('—')
 
   useEffect(() => {
-    void window.api.app.getVersion().then((v) => setVersion(v))
+    if (!window.api?.app?.getVersion) {
+      console.error('[Sidebar] window.api.app.getVersion not available')
+      setVersion('?')
+      return
+    }
+    window.api.app
+      .getVersion()
+      .then((v) => {
+        console.log('[Sidebar] Got version:', v)
+        setVersion(v || '?')
+      })
+      .catch((err) => {
+        console.error('[Sidebar] getVersion failed:', err)
+        setVersion('?')
+      })
   }, [])
 
   return (
