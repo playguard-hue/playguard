@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import type { AppSettings, Stats } from '../../../preload/index.d'
 
-function LimitsPage(): JSX.Element {
+function LimitsPage() {
   const [settings, setSettings] = useState<AppSettings | null>(null)
   const [stats, setStats] = useState<Stats | null>(null)
   const [editing, setEditing] = useState<keyof AppSettings['limits'] | null>(null)
@@ -146,7 +146,7 @@ function LimitCard({
   onChangeDraft,
   onCommit,
   onCancel
-}: LimitCardProps): JSX.Element {
+}: LimitCardProps) {
   return (
     <div className="bg-bg-panel border border-white/5 rounded-xl p-5 flex items-center justify-between gap-4">
       <div className="min-w-0">

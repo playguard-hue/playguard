@@ -1,5 +1,11 @@
 import { ElectronAPI } from '@electron-toolkit/preload'
 
+export interface User {
+  id: string
+  email: string
+  username: string
+}
+
 export interface AppSettings {
   audio: {
     microphoneId: string
@@ -13,12 +19,15 @@ export interface AppSettings {
     limitWarnings: boolean
     breakReminders: boolean
   }
-}
-
-export interface User {
-  id: string
-  email: string
-  username: string
+  limits: {
+    dailyMinutes: number
+    sessionMinutes: number
+    breakIntervalMinutes: number
+  }
+  auth: {
+    token: string | null
+    user: User | null
+  }
 }
 
 export interface ActiveSession {
@@ -52,11 +61,6 @@ export interface Api {
       key: string,
       value: unknown
     ) => Promise<AppSettings>
-    limits: {
-    dailyMinutes: number
-    sessionMinutes: number
-    breakIntervalMinutes: number
-  }
   }
   auth: {
     login: (email: string, password: string) => Promise<User>
@@ -75,6 +79,10 @@ export interface Api {
   sessions: {
     getHistory: () => Promise<SessionHistoryItem[]>
     syncNow: () => Promise<boolean>
+  }
+  app: {
+    setLaunchOnStartup: (enabled: boolean) => Promise<boolean>
+    getLaunchOnStartup: () => Promise<boolean>
   }
 }
 

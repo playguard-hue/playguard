@@ -44,3 +44,7 @@ linux:
 appImage:
   artifactName: PlayGuard-${version}.${ext}
 npmRebuild: false
+publish:
+  provider: github
+  owner: playguard-hue
+  repo: playguard

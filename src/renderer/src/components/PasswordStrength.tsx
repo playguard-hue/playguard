@@ -19,7 +19,7 @@ export function isPasswordValid(pw: string): boolean {
   return passwordChecks.every((c) => c.test(pw))
 }
 
-function PasswordStrength({ password }: PasswordStrengthProps): JSX.Element {
+function PasswordStrength({ password }: PasswordStrengthProps) {
   const passedCount = passwordChecks.filter((c) => c.test(password)).length
   const strength = passedCount / passwordChecks.length
 

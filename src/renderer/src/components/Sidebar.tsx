@@ -19,7 +19,7 @@ const navItems: NavItem[] = [
   { id: 'settings', label: 'Settings', icon: '⚙' }
 ]
 
-function Sidebar({ currentPage, onNavigate }: SidebarProps): JSX.Element {
+function Sidebar({ currentPage, onNavigate }: SidebarProps) {
   const { user, logout } = useAuth()
 
   return (

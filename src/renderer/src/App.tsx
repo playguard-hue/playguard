@@ -8,10 +8,10 @@ import LoginPage from './pages/LoginPage'
 
 export type Page = 'home' | 'limits' | 'settings'
 
-function MainApp(): JSX.Element {
+function MainApp() {
   const [currentPage, setCurrentPage] = useState<Page>('home')
 
-  const renderPage = (): JSX.Element => {
+  const renderPage = () => {
     switch (currentPage) {
       case 'home':
         return <HomePage />
@@ -30,7 +30,7 @@ function MainApp(): JSX.Element {
   )
 }
 
-function AppRouter(): JSX.Element {
+function AppRouter() {
   const { user, loading } = useAuth()
 
   if (loading) {
@@ -44,7 +44,7 @@ function AppRouter(): JSX.Element {
   return user ? <MainApp /> : <LoginPage />
 }
 
-function App(): JSX.Element {
+function App() {
   return (
     <AuthProvider>
       <AppRouter />

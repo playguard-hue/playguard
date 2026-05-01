@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import type { AppSettings } from '../../../preload/index.d'
 import MicrophoneSelector from '../components/MicrophoneSelector'
 
-function SettingsPage(): JSX.Element {
+function SettingsPage() {
   const [settings, setSettings] = useState<AppSettings | null>(null)
 
   // Load settings on mount
@@ -93,7 +93,7 @@ function Section({
 }: {
   title: string
   children: React.ReactNode
-}): JSX.Element {
+}) {
   return (
     <div className="bg-bg-panel border border-white/5 rounded-xl overflow-hidden">
       <div className="px-5 py-3 border-b border-white/5 text-xs uppercase tracking-wider text-white/40 font-medium">
@@ -112,7 +112,7 @@ function Row({
   label: string
   description?: string
   children: React.ReactNode
-}): JSX.Element {
+}) {
   return (
     <div className="flex items-center justify-between gap-6 px-5 py-4">
       <div className="min-w-0">
@@ -132,7 +132,7 @@ function Toggle({
 }: {
   on: boolean
   onChange: (v: boolean) => void
-}): JSX.Element {
+}) {
   return (
     <button
       onClick={() => onChange(!on)}

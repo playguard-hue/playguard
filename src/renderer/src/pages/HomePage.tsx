@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import type { ActiveSession, Stats } from '../../../preload/index.d'
 
-function HomePage(): JSX.Element {
+function HomePage() {
   const [session, setSession] = useState<ActiveSession | null>(null)
   const [stats, setStats] = useState<Stats | null>(null)
   const [, forceUpdate] = useState(0)
@@ -127,7 +127,7 @@ interface StatCardProps {
   trend: string
 }
 
-function StatCard({ label, value, trend }: StatCardProps): JSX.Element {
+function StatCard({ label, value, trend }: StatCardProps) {
   return (
     <div className="bg-bg-panel border border-white/5 rounded-xl p-5">
       <div className="text-xs text-white/40 uppercase tracking-wider mb-2">{label}</div>

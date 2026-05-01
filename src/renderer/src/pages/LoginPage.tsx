@@ -6,7 +6,7 @@ import { validateEmail } from '../utils/email'
 
 type Mode = 'login' | 'register'
 
-function LoginPage(): JSX.Element {
+function LoginPage() {
   const { login, register } = useAuth()
   const [mode, setMode] = useState<Mode>('login')
   const [email, setEmail] = useState('')
@@ -178,7 +178,7 @@ function Field({
   required,
   minLength,
   autoFocus
-}: FieldProps): JSX.Element {
+}: FieldProps) {
   return (
     <label className="block">
       <div className="text-xs text-white/50 mb-1.5">{label}</div>

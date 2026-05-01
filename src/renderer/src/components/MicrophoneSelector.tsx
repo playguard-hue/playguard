@@ -13,7 +13,7 @@ interface MicDevice {
 function MicrophoneSelector({
   selectedId,
   onChange
-}: MicrophoneSelectorProps): JSX.Element {
+}: MicrophoneSelectorProps) {
   const [devices, setDevices] = useState<MicDevice[]>([])
   const [permissionDenied, setPermissionDenied] = useState(false)
   const [volume, setVolume] = useState(0)

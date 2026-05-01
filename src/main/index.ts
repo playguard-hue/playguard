@@ -1,10 +1,13 @@
 import { app, shell, BrowserWindow, ipcMain, Tray, Menu, nativeImage } from 'electron'
 import { join } from 'path'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
+import log from 'electron-log/main'
 import icon from '../../resources/icon.png?asset'
+import trayIconPath from '../../resources/tray-icon.png?asset'
 import { store, AppSettings } from './store'
 import { detectActiveGame } from './gameDetection'
 import {
+  
   startSessionManager,
   getActiveSession,
   syncPendingSessions
@@ -15,7 +18,25 @@ let mainWindow: BrowserWindow | null = null
 let tray: Tray | null = null
 let isQuitting = false
 
+// ─── Logging setup (helps debug production crashes) ──────────
+log.initialize()
+log.transports.file.level = 'info'
+log.transports.console.level = 'info'
+
+process.on('uncaughtException', (err) => {
+  log.error('Uncaught exception:', err)
+})
+
+process.on('unhandledRejection', (err) => {
+  log.error('Unhandled rejection:', err)
+})
+
+log.info('PlayGuard starting...')
+log.info('argv:', process.argv)
+log.info('startedHidden flag will be:', process.argv.includes('--hidden'))
+
 function createWindow(): void {
+  log.info('Creating main window')
   mainWindow = new BrowserWindow({
     width: 1200,
     height: 800,
@@ -31,6 +52,7 @@ function createWindow(): void {
   })
 
   mainWindow.on('ready-to-show', () => {
+    log.info('Window ready-to-show, calling show()')
     mainWindow?.show()
   })
 
@@ -47,10 +69,17 @@ function createWindow(): void {
     return { action: 'deny' }
   })
 
+  mainWindow.webContents.on('did-fail-load', (_e, code, desc) => {
+    log.error('Renderer failed to load:', code, desc)
+  })
+
   if (is.dev && process.env['ELECTRON_RENDERER_URL']) {
+    log.info('Loading renderer from dev URL:', process.env['ELECTRON_RENDERER_URL'])
     mainWindow.loadURL(process.env['ELECTRON_RENDERER_URL'])
   } else {
-    mainWindow.loadFile(join(__dirname, '../renderer/index.html'))
+    const indexPath = join(__dirname, '../renderer/index.html')
+    log.info('Loading renderer from file:', indexPath)
+    mainWindow.loadFile(indexPath)
   }
 }
 
@@ -64,44 +93,58 @@ function showOrCreateWindow(): void {
 }
 
 function createTray(): void {
-  const trayIcon = nativeImage.createFromPath(icon).resize({ width: 16, height: 16 })
-  tray = new Tray(trayIcon)
+  try {
+    log.info('Creating tray, icon path:', icon)
+    const trayIcon = nativeImage.createFromPath(trayIconPath)
+    tray = new Tray(trayIcon)
 
-  const contextMenu = Menu.buildFromTemplate([
-    {
-      label: 'Open PlayGuard',
-      click: showOrCreateWindow
-    },
-    { type: 'separator' },
-    {
-      label: 'Quit PlayGuard',
-      click: () => {
-        isQuitting = true
-        app.quit()
+    const contextMenu = Menu.buildFromTemplate([
+      {
+        label: 'Open PlayGuard',
+        click: showOrCreateWindow
+      },
+      { type: 'separator' },
+      {
+        label: 'Quit PlayGuard',
+        click: () => {
+          isQuitting = true
+          app.quit()
+        }
       }
-    }
-  ])
+    ])
 
-  tray.setToolTip('PlayGuard')
-  tray.setContextMenu(contextMenu)
-  tray.on('click', showOrCreateWindow)
+    tray.setToolTip('PlayGuard')
+    tray.setContextMenu(contextMenu)
+    tray.on('click', showOrCreateWindow)
+    log.info('Tray created successfully')
+  } catch (err) {
+    log.error('Failed to create tray:', err)
+  }
 }
 
 app.whenReady().then(() => {
+  log.info('app.whenReady fired')
   electronApp.setAppUserModelId('net.playguard.app')
 
-  // Was app launched at Windows startup with --hidden flag?
   const startedHidden = process.argv.includes('--hidden')
 
   // Sync auto-start setting with actual Windows state
-  const actualAutoStart = app.getLoginItemSettings().openAtLogin
-  const storedAppSettings = store.get('app')
-  if (storedAppSettings.launchOnStartup !== actualAutoStart) {
-    store.set('app', { ...storedAppSettings, launchOnStartup: actualAutoStart })
+  try {
+    const actualAutoStart = app.getLoginItemSettings().openAtLogin
+    const storedAppSettings = store.get('app')
+    if (storedAppSettings.launchOnStartup !== actualAutoStart) {
+      store.set('app', { ...storedAppSettings, launchOnStartup: actualAutoStart })
+    }
+  } catch (err) {
+    log.error('Auto-start sync failed:', err)
   }
 
   // Start polling for games
-  startSessionManager()
+  try {
+    startSessionManager()
+  } catch (err) {
+    log.error('startSessionManager failed:', err)
+  }
 
   app.on('browser-window-created', (_, window) => {
     optimizer.watchWindowShortcuts(window)
@@ -160,16 +203,12 @@ app.whenReady().then(() => {
 
   // ─── Game / Session IPC ───────────────────────────────────
   ipcMain.handle('session:get-active', () => getActiveSession())
-
   ipcMain.handle('stats:get', async () => api.getStats())
-
   ipcMain.handle('sessions:get-history', async () => api.getSessions())
-
   ipcMain.handle('sessions:sync-now', async () => {
     await syncPendingSessions()
     return true
   })
-
   ipcMain.handle('game:detect-active', async () => detectActiveGame())
 
   // ─── App behavior IPC ─────────────────────────────────────
@@ -186,10 +225,11 @@ app.whenReady().then(() => {
     return app.getLoginItemSettings().openAtLogin
   })
 
-  // Always create tray; only create window if not started hidden
   createTray()
   if (!startedHidden) {
     createWindow()
+  } else {
+    log.info('Started hidden — skipping initial window creation')
   }
 
   app.on('activate', () => {
