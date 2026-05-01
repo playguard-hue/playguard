@@ -1,13 +1,13 @@
-import { app, shell, BrowserWindow, ipcMain, Tray, Menu, nativeImage } from 'electron'
+import { app, shell, BrowserWindow, ipcMain, Tray, Menu, nativeImage, dialog } from 'electron'
 import { join } from 'path'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import log from 'electron-log/main'
+import { autoUpdater } from 'electron-updater'
 import icon from '../../resources/icon.png?asset'
 import trayIconPath from '../../resources/tray-icon.png?asset'
 import { store, AppSettings } from './store'
 import { detectActiveGame } from './gameDetection'
 import {
-  
   startSessionManager,
   getActiveSession,
   syncPendingSessions
@@ -18,23 +18,73 @@ let mainWindow: BrowserWindow | null = null
 let tray: Tray | null = null
 let isQuitting = false
 
-// ─── Logging setup (helps debug production crashes) ──────────
+// ─── Logging setup ────────────────────────────────────────────
 log.initialize()
 log.transports.file.level = 'info'
 log.transports.console.level = 'info'
 
-process.on('uncaughtException', (err) => {
-  log.error('Uncaught exception:', err)
-})
-
-process.on('unhandledRejection', (err) => {
-  log.error('Unhandled rejection:', err)
-})
+process.on('uncaughtException', (err) => log.error('Uncaught exception:', err))
+process.on('unhandledRejection', (err) => log.error('Unhandled rejection:', err))
 
 log.info('PlayGuard starting...')
 log.info('argv:', process.argv)
-log.info('startedHidden flag will be:', process.argv.includes('--hidden'))
 
+// ─── Auto-updater setup ───────────────────────────────────────
+autoUpdater.logger = log
+autoUpdater.autoDownload = true
+autoUpdater.autoInstallOnAppQuit = true
+
+autoUpdater.on('checking-for-update', () => {
+  log.info('[updater] Checking for update...')
+})
+
+autoUpdater.on('update-available', (info) => {
+  log.info('[updater] Update available:', info.version)
+})
+
+autoUpdater.on('update-not-available', (info) => {
+  log.info('[updater] Up to date. Current:', info.version)
+})
+
+autoUpdater.on('error', (err) => {
+  log.error('[updater] Error:', err)
+})
+
+autoUpdater.on('download-progress', (progress) => {
+  log.info(
+    `[updater] Downloading: ${progress.percent.toFixed(1)}% — ${(progress.bytesPerSecond / 1024).toFixed(0)} KB/s`
+  )
+})
+
+autoUpdater.on('update-downloaded', async (info) => {
+  log.info('[updater] Update downloaded:', info.version)
+
+  // Show dialog to user
+  const result = await dialog.showMessageBox({
+    type: 'info',
+    buttons: ['Restart now', 'Later'],
+    defaultId: 0,
+    title: 'Update ready',
+    message: `PlayGuard ${info.version} has been downloaded.`,
+    detail: 'Restart the app to apply the update.'
+  })
+
+  if (result.response === 0) {
+    isQuitting = true
+    autoUpdater.quitAndInstall()
+  }
+  // If "Later" — will install on next quit (autoInstallOnAppQuit)
+})
+
+function checkForUpdates(): void {
+  if (is.dev) {
+    log.info('[updater] Skipped — dev mode')
+    return
+  }
+  void autoUpdater.checkForUpdates()
+}
+
+// ─── Window creation ──────────────────────────────────────────
 function createWindow(): void {
   log.info('Creating main window')
   mainWindow = new BrowserWindow({
@@ -52,7 +102,6 @@ function createWindow(): void {
   })
 
   mainWindow.on('ready-to-show', () => {
-    log.info('Window ready-to-show, calling show()')
     mainWindow?.show()
   })
 
@@ -69,17 +118,10 @@ function createWindow(): void {
     return { action: 'deny' }
   })
 
-  mainWindow.webContents.on('did-fail-load', (_e, code, desc) => {
-    log.error('Renderer failed to load:', code, desc)
-  })
-
   if (is.dev && process.env['ELECTRON_RENDERER_URL']) {
-    log.info('Loading renderer from dev URL:', process.env['ELECTRON_RENDERER_URL'])
     mainWindow.loadURL(process.env['ELECTRON_RENDERER_URL'])
   } else {
-    const indexPath = join(__dirname, '../renderer/index.html')
-    log.info('Loading renderer from file:', indexPath)
-    mainWindow.loadFile(indexPath)
+    mainWindow.loadFile(join(__dirname, '../renderer/index.html'))
   }
 }
 
@@ -94,14 +136,17 @@ function showOrCreateWindow(): void {
 
 function createTray(): void {
   try {
-    log.info('Creating tray, icon path:', icon)
     const trayIcon = nativeImage.createFromPath(trayIconPath)
     tray = new Tray(trayIcon)
 
     const contextMenu = Menu.buildFromTemplate([
+      { label: 'Open PlayGuard', click: showOrCreateWindow },
+      { type: 'separator' },
       {
-        label: 'Open PlayGuard',
-        click: showOrCreateWindow
+        label: 'Check for updates',
+        click: () => {
+          checkForUpdates()
+        }
       },
       { type: 'separator' },
       {
@@ -116,19 +161,19 @@ function createTray(): void {
     tray.setToolTip('PlayGuard')
     tray.setContextMenu(contextMenu)
     tray.on('click', showOrCreateWindow)
-    log.info('Tray created successfully')
   } catch (err) {
     log.error('Failed to create tray:', err)
   }
 }
 
+// ─── App lifecycle ────────────────────────────────────────────
 app.whenReady().then(() => {
   log.info('app.whenReady fired')
   electronApp.setAppUserModelId('net.playguard.app')
 
   const startedHidden = process.argv.includes('--hidden')
 
-  // Sync auto-start setting with actual Windows state
+  // Sync auto-start with Windows state
   try {
     const actualAutoStart = app.getLoginItemSettings().openAtLogin
     const storedAppSettings = store.get('app')
@@ -139,7 +184,6 @@ app.whenReady().then(() => {
     log.error('Auto-start sync failed:', err)
   }
 
-  // Start polling for games
   try {
     startSessionManager()
   } catch (err) {
@@ -152,7 +196,6 @@ app.whenReady().then(() => {
 
   // ─── Settings IPC ─────────────────────────────────────────
   ipcMain.handle('settings:get-all', () => store.store)
-
   ipcMain.handle(
     'settings:set',
     (_event, section: keyof AppSettings, key: string, value: unknown) => {
@@ -197,9 +240,7 @@ app.whenReady().then(() => {
     return true
   })
 
-  ipcMain.handle('auth:get-current-user', () => {
-    return store.get('auth').user
-  })
+  ipcMain.handle('auth:get-current-user', () => store.get('auth').user)
 
   // ─── Game / Session IPC ───────────────────────────────────
   ipcMain.handle('session:get-active', () => getActiveSession())
@@ -225,12 +266,22 @@ app.whenReady().then(() => {
     return app.getLoginItemSettings().openAtLogin
   })
 
+  ipcMain.handle('app:check-for-updates', () => {
+    checkForUpdates()
+    return true
+  })
+
+  // ─── Window + tray ────────────────────────────────────────
   createTray()
   if (!startedHidden) {
     createWindow()
-  } else {
-    log.info('Started hidden — skipping initial window creation')
   }
+
+  // Initial update check after 10 seconds (let app settle first)
+  setTimeout(() => checkForUpdates(), 10_000)
+
+  // Re-check every 4 hours
+  setInterval(() => checkForUpdates(), 4 * 60 * 60 * 1000)
 
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) createWindow()
