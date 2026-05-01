@@ -33,7 +33,7 @@ const api = {
   },
   sessions: {
     getHistory: () => ipcRenderer.invoke('sessions:get-history'),
-    syncNow: () => ipcRenderer.invoke('sessions:sync-now'),
+    syncNow: () => ipcRenderer.invoke('sessions:sync-now')
   },
   app: {
     setLaunchOnStartup: (enabled: boolean) =>
@@ -42,6 +42,7 @@ const api = {
     getVersion: () => ipcRenderer.invoke('app:get-version'),
     checkForUpdates: () => ipcRenderer.invoke('app:check-for-updates')
   }
+}
 
 if (process.contextIsolated) {
   try {
