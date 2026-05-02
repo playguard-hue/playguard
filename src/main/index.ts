@@ -102,8 +102,9 @@ function createWindow(): void {
   })
 
   mainWindow.on('ready-to-show', () => {
-    mainWindow?.show()
-  })
+  mainWindow?.show()
+  mainWindow?.webContents.openDevTools({ mode: 'detach' })
+})
 
   mainWindow.on('close', (event) => {
     const shouldMinimize = store.get('app').minimizeToTray
