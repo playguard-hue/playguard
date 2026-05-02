@@ -385,4 +385,23 @@ export function clearPendingSessions(): void {
   store.set('pendingSessions', [])
 }
 
+/**
+ * Force-save the currently active session as completed.
+ * Used when app is shutting down — we don't want to lose unsynced playtime.
+ */
+export async function flushActiveSession(): Promise<void> {
+  if (!activeSession) return
+  const ended = Date.now()
+  const completed: CompletedSession = {
+    ...activeSession,
+    endedAt: ended,
+    durationSeconds: Math.round((ended - activeSession.startedAt) / 1000)
+  }
+  // Save synchronously to local store first (most important)
+  const existing = (store.get('pendingSessions') as CompletedSession[]) ?? []
+  existing.push(completed)
+  store.set('pendingSessions', existing)
+  activeSession = null
+}
+
 export { syncPendingSessions }

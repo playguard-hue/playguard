@@ -10,7 +10,8 @@ import { detectActiveGame } from './gameDetection'
 import {
   startSessionManager,
   getActiveSession,
-  syncPendingSessions
+  syncPendingSessions,
+  flushActiveSession
 } from './sessionManager'
 import { api } from './apiClient'
 import { registerStressIpc, destroyWorkerWindow } from './stressMonitor'
@@ -309,8 +310,29 @@ app.on('window-all-closed', () => {
   }
 })
 
-app.on('before-quit', () => {
-  isQuitting = true
+let hasFlushed = false
+
+app.on('before-quit', async (event) => {
+  if (!hasFlushed) {
+    event.preventDefault()
+    hasFlushed = true
+    isQuitting = true
+    try {
+      await flushActiveSession()
+      // Try to sync to backend (best effort, with short timeout)
+      await Promise.race([
+        syncPendingSessions(),
+        new Promise((resolve) => setTimeout(resolve, 3000))
+      ])
+    } catch (err) {
+      log.error('[before-quit] Failed to flush session:', err)
+    }
+    tray?.destroy()
+    destroyWorkerWindow()
+    destroyKeyboardHook()
+    app.quit()
+    return
+  }
   tray?.destroy()
   destroyWorkerWindow()
   destroyKeyboardHook()
