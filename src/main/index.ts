@@ -59,7 +59,6 @@ autoUpdater.on('download-progress', (progress) => {
 autoUpdater.on('update-downloaded', async (info) => {
   log.info('[updater] Update downloaded:', info.version)
 
-  // Show dialog to user
   const result = await dialog.showMessageBox({
     type: 'info',
     buttons: ['Restart now', 'Later'],
@@ -73,7 +72,6 @@ autoUpdater.on('update-downloaded', async (info) => {
     isQuitting = true
     autoUpdater.quitAndInstall()
   }
-  // If "Later" — will install on next quit (autoInstallOnAppQuit)
 })
 
 function checkForUpdates(): void {
@@ -102,9 +100,9 @@ function createWindow(): void {
   })
 
   mainWindow.on('ready-to-show', () => {
-  mainWindow?.show()
-  mainWindow?.webContents.openDevTools({ mode: 'detach' })
-})
+    mainWindow?.show()
+    mainWindow?.webContents.openDevTools({ mode: 'detach' })
+  })
 
   mainWindow.on('close', (event) => {
     const shouldMinimize = store.get('app').minimizeToTray
@@ -270,10 +268,10 @@ app.whenReady().then(() => {
   ipcMain.handle('app:check-for-updates', () => {
     checkForUpdates()
     return true
-    
+  })
+
   ipcMain.handle('app:get-version', () => {
     return app.getVersion()
-  })
   })
 
   // ─── Window + tray ────────────────────────────────────────
@@ -282,7 +280,7 @@ app.whenReady().then(() => {
     createWindow()
   }
 
-  // Initial update check after 10 seconds (let app settle first)
+  // Initial update check after 10 seconds
   setTimeout(() => checkForUpdates(), 10_000)
 
   // Re-check every 4 hours
