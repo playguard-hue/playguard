@@ -43,7 +43,7 @@ function LimitsPage() {
   }
 
   // Today's progress
-  const todayMinutes = Math.floor((stats?.today_seconds ?? 0) / 60)
+  const todayMinutes = Math.floor(Number(stats?.today_seconds ?? 0) / 60)
   const dailyLimit = settings.limits.dailyMinutes
   const dailyProgress = Math.min(1, todayMinutes / dailyLimit)
   const dailyOver = todayMinutes > dailyLimit

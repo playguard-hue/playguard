@@ -38,7 +38,7 @@ function HomePage() {
   const liveDuration = session
     ? Math.floor((Date.now() - session.startedAt) / 1000)
     : 0
-  const todaySeconds = (stats?.today_seconds ?? 0) + liveDuration
+  const todaySeconds = Number(stats?.today_seconds ?? 0) + liveDuration
 
   return (
     <div className="p-8">
@@ -56,12 +56,12 @@ function HomePage() {
         />
         <StatCard
           label="All time"
-          value={formatDurationShort(stats?.total_seconds ?? 0)}
+          value={formatDurationShort(Number(stats?.total_seconds ?? 0))}
           trend={`${stats?.total_sessions ?? 0} sessions`}
         />
         <StatCard
           label="Avg session"
-          value={formatDurationShort(Math.round(stats?.avg_seconds ?? 0))}
+          value={formatDurationShort(Math.round(Number(stats?.avg_seconds ?? 0)))}
           trend="Keep it healthy"
         />
       </div>
