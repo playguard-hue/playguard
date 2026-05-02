@@ -91,6 +91,7 @@ function createWindow(): void {
     minWidth: 900,
     minHeight: 600,
     show: false,
+    title: 'PlayGuard',
     autoHideMenuBar: true,
     icon,
     webPreferences: {
@@ -101,7 +102,6 @@ function createWindow(): void {
 
   mainWindow.on('ready-to-show', () => {
     mainWindow?.show()
-    mainWindow?.webContents.openDevTools({ mode: 'detach' })
   })
 
   mainWindow.on('close', (event) => {
