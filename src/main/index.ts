@@ -13,6 +13,9 @@ import {
   syncPendingSessions
 } from './sessionManager'
 import { api } from './apiClient'
+import { registerStressIpc, destroyWorkerWindow } from './stressMonitor'
+import { destroyKeyboardHook } from './keyboardMonitor'
+import { refreshStreak, getStreak } from './streakCalculator'
 
 let mainWindow: BrowserWindow | null = null
 let tray: Tray | null = null
@@ -183,6 +186,9 @@ app.whenReady().then(() => {
     log.error('Auto-start sync failed:', err)
   }
 
+  // Register IPC handlers for stress monitor (must be before session start)
+  registerStressIpc()
+
   try {
     startSessionManager()
   } catch (err) {
@@ -273,7 +279,9 @@ app.whenReady().then(() => {
   ipcMain.handle('app:get-version', () => {
     return app.getVersion()
   })
-
+// ─── Streak IPC ───────────────────────────────────────────
+  ipcMain.handle('streak:get', () => getStreak())
+  ipcMain.handle('streak:refresh', async () => refreshStreak())
   // ─── Window + tray ────────────────────────────────────────
   createTray()
   if (!startedHidden) {
@@ -285,6 +293,10 @@ app.whenReady().then(() => {
 
   // Re-check every 4 hours
   setInterval(() => checkForUpdates(), 4 * 60 * 60 * 1000)
+
+  // Refresh streak after app settles, then every hour
+  setTimeout(() => void refreshStreak(), 5_000)
+  setInterval(() => void refreshStreak(), 60 * 60 * 1000)
 
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) createWindow()
@@ -300,4 +312,6 @@ app.on('window-all-closed', () => {
 app.on('before-quit', () => {
   isQuitting = true
   tray?.destroy()
+  destroyWorkerWindow()
+  destroyKeyboardHook()
 })

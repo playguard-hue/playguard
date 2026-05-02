@@ -26,6 +26,7 @@
     "electron-log": "^5.4.3",
     "electron-store": "^8.2.0",
     "electron-updater": "^6.3.9",
+    "uiohook-napi": "^1.5.5",
     "vdf-parser": "^1.2.1"
   },
   "devDependencies": {

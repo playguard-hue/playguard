@@ -18,6 +18,8 @@ export interface AppSettings {
   notifications: {
     limitWarnings: boolean
     breakReminders: boolean
+    hydrationReminders: boolean
+    stretchReminders: boolean
   }
   limits: {
     dailyMinutes: number
@@ -30,11 +32,21 @@ export interface AppSettings {
   }
 }
 
+export interface StressEvent {
+  timestamp: string
+  source: 'voice' | 'keyboard'
+  rms?: number
+  durationMs?: number
+  rate?: number
+  key?: string
+}
+
 export interface ActiveSession {
   appId: string
   name: string
   source: string
   startedAt: number
+  stressEvents: StressEvent[]
 }
 
 export interface Stats {
@@ -85,6 +97,10 @@ export interface Api {
     getLaunchOnStartup: () => Promise<boolean>
     getVersion: () => Promise<string>
     checkForUpdates: () => Promise<boolean>
+  }
+  streak: {
+    get: () => Promise<{ currentDays: number; longestDays: number }>
+    refresh: () => Promise<{ currentDays: number; longestDays: number } | null>
   }
 }
 

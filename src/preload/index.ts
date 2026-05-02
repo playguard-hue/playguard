@@ -41,6 +41,10 @@ const api = {
     getLaunchOnStartup: () => ipcRenderer.invoke('app:get-launch-on-startup'),
     getVersion: () => ipcRenderer.invoke('app:get-version'),
     checkForUpdates: () => ipcRenderer.invoke('app:check-for-updates')
+  },
+  streak: {
+    get: () => ipcRenderer.invoke('streak:get'),
+    refresh: () => ipcRenderer.invoke('streak:refresh')
   }
 }
 

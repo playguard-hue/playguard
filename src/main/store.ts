@@ -12,6 +12,8 @@ export interface AppSettings {
   notifications: {
     limitWarnings: boolean
     breakReminders: boolean
+    hydrationReminders: boolean
+    stretchReminders: boolean
   }
   limits: {
     dailyMinutes: number
@@ -26,6 +28,15 @@ export interface AppSettings {
       username: string
     } | null
   }
+  streak: {
+    currentDays: number
+    longestDays: number
+    lastCheckedDate: string
+  }
+  intent: {
+    askBeforeSession: boolean
+    askAfterSession: boolean
+  }
 }
 
 const defaults: AppSettings = {
@@ -39,7 +50,9 @@ const defaults: AppSettings = {
   },
   notifications: {
     limitWarnings: true,
-    breakReminders: true
+    breakReminders: true,
+    hydrationReminders: true,
+    stretchReminders: true
   },
   limits: {
     dailyMinutes: 120,
@@ -49,6 +62,15 @@ const defaults: AppSettings = {
   auth: {
     token: null,
     user: null
+  },
+  streak: {
+    currentDays: 0,
+    longestDays: 0,
+    lastCheckedDate: ''
+  },
+  intent: {
+    askBeforeSession: true,
+    askAfterSession: true
   }
 }
 

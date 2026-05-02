@@ -69,16 +69,28 @@ function SettingsPage() {
         </Section>
 
         <Section title="Notifications">
-          <Row label="Limit warnings">
+          <Row label="Limit warnings" description="Alerts when you exceed daily or session limits">
             <Toggle
               on={settings.notifications.limitWarnings}
               onChange={(v) => update('notifications', 'limitWarnings', v)}
             />
           </Row>
-          <Row label="Break reminders">
+          <Row label="Break reminders" description="Suggest taking a break every so often">
             <Toggle
               on={settings.notifications.breakReminders}
               onChange={(v) => update('notifications', 'breakReminders', v)}
+            />
+          </Row>
+          <Row label="Hydration reminders 💧" description="Drink water every 60 minutes during a session">
+            <Toggle
+              on={settings.notifications.hydrationReminders}
+              onChange={(v) => update('notifications', 'hydrationReminders', v)}
+            />
+          </Row>
+          <Row label="Stretch reminders 🧘" description="Stand up and stretch every 90 minutes">
+            <Toggle
+              on={settings.notifications.stretchReminders}
+              onChange={(v) => update('notifications', 'stretchReminders', v)}
             />
           </Row>
         </Section>

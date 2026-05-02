@@ -5,6 +5,7 @@ import HomePage from './pages/HomePage'
 import LimitsPage from './pages/LimitsPage'
 import SettingsPage from './pages/SettingsPage'
 import LoginPage from './pages/LoginPage'
+import IntentModals from './components/IntentModals'
 
 export type Page = 'home' | 'limits' | 'settings'
 
@@ -26,6 +27,7 @@ function MainApp() {
     <div className="flex h-screen w-screen bg-bg text-white overflow-hidden">
       <Sidebar currentPage={currentPage} onNavigate={setCurrentPage} />
       <main className="flex-1 overflow-y-auto">{renderPage()}</main>
+      <IntentModals />
     </div>
   )
 }

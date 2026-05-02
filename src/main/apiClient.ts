@@ -1,4 +1,5 @@
 import { store } from './store'
+import type { StressEvent } from './stressMonitor'
 
 const API_BASE = 'https://api.playguard.net'
 
@@ -28,7 +29,6 @@ async function request<T>(
   })
 
   if (res.status === 401) {
-    // Token expired or invalid — clear it
     store.set('auth', { token: null, user: null })
     throw new UnauthorizedError()
   }
@@ -49,7 +49,7 @@ export interface BackendSession {
   started_at: string
   ended_at: string
   created_at: string
-  stress_events: unknown[]
+  stress_events: StressEvent[]
 }
 
 export interface BackendStats {
@@ -65,6 +65,7 @@ export const api = {
     duration_seconds: number
     started_at: string
     ended_at: string
+    stress_events?: StressEvent[]
   }): Promise<BackendSession> {
     return request<BackendSession>('/sessions', { method: 'POST', body: s })
   },

@@ -1,9 +1,13 @@
 import { useEffect, useState } from 'react'
-import type { ActiveSession, Stats } from '../../../preload/index.d'
+import type { ActiveSession, Stats, User, AppSettings } from '../../../preload/index.d'
+import { buildGreeting } from '../utils/greetings'
 
 function HomePage() {
   const [session, setSession] = useState<ActiveSession | null>(null)
   const [stats, setStats] = useState<Stats | null>(null)
+  const [streak, setStreak] = useState<{ currentDays: number; longestDays: number } | null>(null)
+  const [user, setUser] = useState<User | null>(null)
+  const [dailyLimit, setDailyLimit] = useState(120)
   const [, forceUpdate] = useState(0)
 
   // Subscribe to active session
@@ -28,6 +32,23 @@ function HomePage() {
     return unsub
   }, [])
 
+  // Load streak
+  useEffect(() => {
+    void window.api.streak.get().then(setStreak).catch(() => undefined)
+    const unsub = window.api.stats.onInvalidated(() => {
+      void window.api.streak.get().then(setStreak).catch(() => undefined)
+    })
+    return unsub
+  }, [])
+
+  // Load user + daily limit (used by greeting)
+  useEffect(() => {
+    void window.api.auth.getCurrentUser().then(setUser).catch(() => undefined)
+    void window.api.settings.getAll().then((s: AppSettings) => {
+      setDailyLimit(s.limits.dailyMinutes)
+    }).catch(() => undefined)
+  }, [])
+
   // Live counter while playing
   useEffect(() => {
     if (!session) return
@@ -40,11 +61,19 @@ function HomePage() {
     : 0
   const todaySeconds = Number(stats?.today_seconds ?? 0) + liveDuration
 
+  const greeting = buildGreeting({
+    user,
+    session,
+    stats,
+    streak,
+    dailyLimitMinutes: dailyLimit
+  })
+
   return (
     <div className="p-8">
       <header className="mb-8">
-        <h1 className="text-3xl font-bold mb-1">Welcome back</h1>
-        <p className="text-white/50">Here&apos;s your gaming summary for today</p>
+        <h1 className="text-3xl font-bold mb-1">{greeting.title}</h1>
+        <p className="text-white/50">{greeting.subtitle}</p>
       </header>
 
       {/* Stats grid */}
@@ -65,6 +94,25 @@ function HomePage() {
           trend="Keep it healthy"
         />
       </div>
+
+      {/* Streak banner */}
+      {streak && streak.currentDays > 0 && (
+        <div className="bg-gradient-to-r from-orange-500/10 to-yellow-500/10 border border-orange-500/30 rounded-xl p-5 mb-8 flex items-center gap-4">
+          <div className="text-4xl">🔥</div>
+          <div className="flex-1">
+            <div className="text-lg font-bold">
+              {streak.currentDays}-day healthy streak
+            </div>
+            <div className="text-sm text-white/60">
+              {streak.currentDays === 1
+                ? 'Stay within your daily limit tomorrow to keep it going.'
+                : streak.longestDays > streak.currentDays
+                  ? `Your longest is ${streak.longestDays} days — keep going!`
+                  : "You're on your longest streak ever!"}
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Current session */}
       <div className="bg-bg-panel border border-white/5 rounded-xl p-6">

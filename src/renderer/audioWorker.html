@@ -1,0 +1,130 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="UTF-8" />
+    <title>PlayGuard Audio Worker</title>
+  </head>
+  <body>
+    <script>
+      const { ipcRenderer } = require('electron')
+
+      let audioContext = null
+      let analyser = null
+      let microphone = null
+      let dataArray = null
+      let rafId = null
+
+      // Loud event detection state
+      let loudStartTime = null
+      let lastEventTime = 0
+      const LOUD_THRESHOLD = 0.35       // RMS above which we count as "loud"
+      const MIN_LOUD_DURATION_MS = 500  // Must stay loud for at least this long
+      const COOLDOWN_MS = 5000          // Don't fire events more than once per 5 sec
+
+      async function start(deviceId) {
+        try {
+          if (audioContext) {
+            await stop()
+          }
+
+          const constraints = {
+            audio: deviceId ? { deviceId: { exact: deviceId } } : true
+          }
+          const stream = await navigator.mediaDevices.getUserMedia(constraints)
+
+          audioContext = new AudioContext()
+          microphone = audioContext.createMediaStreamSource(stream)
+          analyser = audioContext.createAnalyser()
+          analyser.fftSize = 1024
+          analyser.smoothingTimeConstant = 0.3
+          microphone.connect(analyser)
+
+          dataArray = new Float32Array(analyser.fftSize)
+          loop()
+          ipcRenderer.send('stress:worker-status', { running: true })
+          console.log('[audio-worker] Started with device:', deviceId)
+        } catch (err) {
+          console.error('[audio-worker] Failed to start:', err)
+          ipcRenderer.send('stress:worker-status', {
+            running: false,
+            error: err.message
+          })
+        }
+      }
+
+      async function stop() {
+        if (rafId) cancelAnimationFrame(rafId)
+        rafId = null
+        if (microphone) {
+          try {
+            microphone.disconnect()
+          } catch (e) {
+            /* ignore */
+          }
+        }
+        if (audioContext) {
+          try {
+            await audioContext.close()
+          } catch (e) {
+            /* ignore */
+          }
+        }
+        audioContext = null
+        analyser = null
+        microphone = null
+        ipcRenderer.send('stress:worker-status', { running: false })
+        console.log('[audio-worker] Stopped')
+      }
+
+      function loop() {
+        if (!analyser) return
+
+        analyser.getFloatTimeDomainData(dataArray)
+
+        // Compute RMS (root mean square) — perceptual loudness measure
+        let sumSquares = 0
+        for (let i = 0; i < dataArray.length; i++) {
+          sumSquares += dataArray[i] * dataArray[i]
+        }
+        const rms = Math.sqrt(sumSquares / dataArray.length)
+
+        const now = Date.now()
+        const isLoud = rms > LOUD_THRESHOLD
+
+        if (isLoud) {
+          if (loudStartTime === null) {
+            loudStartTime = now
+          } else if (
+            now - loudStartTime >= MIN_LOUD_DURATION_MS &&
+            now - lastEventTime >= COOLDOWN_MS
+          ) {
+            // Fire stress event
+            ipcRenderer.send('stress:detected', {
+              timestamp: new Date().toISOString(),
+              source: 'voice',
+              rms: rms,
+              durationMs: now - loudStartTime
+            })
+            lastEventTime = now
+            loudStartTime = null
+          }
+        } else {
+          loudStartTime = null
+        }
+
+        rafId = requestAnimationFrame(loop)
+      }
+
+      // Listen for control commands from main
+      ipcRenderer.on('stress:start', (_e, deviceId) => {
+        void start(deviceId)
+      })
+      ipcRenderer.on('stress:stop', () => {
+        void stop()
+      })
+
+      // Tell main we're ready
+      ipcRenderer.send('stress:worker-ready')
+    </script>
+  </body>
+</html>
