@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react'
+import { Home, Timer, Target, Trophy, Swords, BarChart3, Settings as SettingsIcon, Power, Star, type LucideIcon } from 'lucide-react'
 import { useAuth } from '../contexts/AuthContext'
 import logo from '../assets/Logo.png'
 import type { Page } from '../App'
-import type { UserStats } from '../../../preload/index.d'
+import type { UserStats, SubscriptionInfo } from '../../../preload/index.d'
 
 interface SidebarProps {
   currentPage: Page
@@ -12,23 +13,24 @@ interface SidebarProps {
 interface NavItem {
   id: Page
   label: string
-  icon: string
+  Icon: LucideIcon
 }
 
 const navItems: NavItem[] = [
-  { id: 'home', label: 'Home', icon: '⌂' },
-  { id: 'limits', label: 'Limits', icon: '⏱' },
-  { id: 'focus', label: 'Focus', icon: '🎯' },
-  { id: 'achievements', label: 'Achievements', icon: '🏆' },
-  { id: 'challenges', label: 'Challenges', icon: '⚔' },
-  { id: 'leaderboard', label: 'Leaderboard', icon: '📊' },
-  { id: 'settings', label: 'Settings', icon: '⚙' }
+  { id: 'home', label: 'Home', Icon: Home },
+  { id: 'limits', label: 'Limits', Icon: Timer },
+  { id: 'focus', label: 'Focus', Icon: Target },
+  { id: 'achievements', label: 'Achievements', Icon: Trophy },
+  { id: 'challenges', label: 'Challenges', Icon: Swords },
+  { id: 'leaderboard', label: 'Leaderboard', Icon: BarChart3 },
+  { id: 'settings', label: 'Settings', Icon: SettingsIcon }
 ]
 
 function Sidebar({ currentPage, onNavigate }: SidebarProps) {
   const { user, logout } = useAuth()
   const [version, setVersion] = useState('—')
   const [stats, setStats] = useState<UserStats | null>(null)
+  const [subscription, setSubscription] = useState<SubscriptionInfo | null>(null)
 
   useEffect(() => {
     if (!window.api?.app?.getVersion) {
@@ -56,6 +58,13 @@ function Sidebar({ currentPage, onNavigate }: SidebarProps) {
     const unsub = window.api.achievements.onUnlocked(() => load())
     return unsub
   }, [])
+ 
+  // Load subscription
+  useEffect(() => {
+    void window.api.subscription.get().then((res) => {
+      if (res.data) setSubscription(res.data)
+    })
+  }, [])
 
   const xpPercent = stats
     ? Math.min(100, Math.round((stats.currentXp / stats.xpForNext) * 100))
@@ -78,6 +87,7 @@ function Sidebar({ currentPage, onNavigate }: SidebarProps) {
       <nav className="flex-1 p-3 space-y-1">
         {navItems.map((item) => {
           const active = currentPage === item.id
+          const { Icon } = item
           return (
             <button
               key={item.id}
@@ -88,7 +98,7 @@ function Sidebar({ currentPage, onNavigate }: SidebarProps) {
                   : 'text-white/60 hover:bg-white/5 hover:text-white'
               }`}
             >
-              <span className="text-base w-5">{item.icon}</span>
+              <Icon size={16} strokeWidth={2} className="flex-shrink-0" />
               <span>{item.label}</span>
               {active && (
                 <span className="ml-auto w-1.5 h-1.5 rounded-full bg-brand-cyan" />
@@ -106,7 +116,7 @@ function Sidebar({ currentPage, onNavigate }: SidebarProps) {
         >
           <div className="flex items-center justify-between mb-1.5">
             <div className="flex items-center gap-2">
-              <span className="text-sm">⭐</span>
+              <Star size={14} fill="currentColor" className="text-yellow-400" />
               <span className="text-sm font-semibold">Level {stats.level}</span>
             </div>
             <span className="text-[10px] text-white/50 font-medium">
@@ -132,15 +142,22 @@ function Sidebar({ currentPage, onNavigate }: SidebarProps) {
             {user?.username?.[0] ?? '?'}
           </div>
           <div className="flex-1 min-w-0">
-            <div className="text-sm truncate">{user?.username ?? 'Guest'}</div>
+            <div className="flex items-center gap-1.5">
+              <span className="text-sm truncate">{user?.username ?? 'Guest'}</span>
+              {subscription?.status === 'active' && (
+                <span className="text-[9px] px-1.5 py-0.5 rounded bg-gradient-to-r from-brand-purple to-brand-cyan text-white font-bold tracking-wide flex-shrink-0">
+                  PREMIUM
+                </span>
+              )}
+            </div>
             <div className="text-xs text-white/40 truncate">{user?.email}</div>
           </div>
           <button
             onClick={() => void logout()}
             title="Sign out"
-            className="text-white/40 hover:text-white text-lg leading-none w-6 h-6 flex items-center justify-center rounded hover:bg-white/5"
+            className="text-white/40 hover:text-white w-6 h-6 flex items-center justify-center rounded hover:bg-white/5"
           >
-            ⏻
+            <Power size={14} />
           </button>
         </div>
       </div>

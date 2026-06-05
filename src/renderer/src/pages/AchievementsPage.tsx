@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import type { Achievement, AchievementCategory } from '../../../preload/index.d'
+import type { Achievement, AchievementCategory, SubscriptionInfo } from '../../../preload/index.d'
 
 const CATEGORY_LABELS: Record<AchievementCategory, string> = {
   streak: '🔥 Streak',
@@ -12,11 +12,11 @@ const CATEGORY_ORDER: AchievementCategory[] = ['streak', 'control', 'mindful', '
 
 function AchievementsPage() {
   const [achievements, setAchievements] = useState<Achievement[]>([])
+  const [subscription, setSubscription] = useState<SubscriptionInfo | null>(null)
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
     void load()
-    // Refresh whenever unlock fires
     const unsub = window.api.achievements.onUnlocked(() => {
       void load()
     })
@@ -26,10 +26,13 @@ function AchievementsPage() {
   const load = async (): Promise<void> => {
     setLoading(true)
     try {
-      // Trigger check first
       await window.api.achievements.refresh()
-      const list = await window.api.achievements.getAll()
+      const [list, subRes] = await Promise.all([
+        window.api.achievements.getAll(),
+        window.api.subscription.get()
+      ])
       setAchievements(list)
+      if (subRes.data) setSubscription(subRes.data)
     } catch (err) {
       console.error('Failed to load achievements', err)
     } finally {
@@ -37,11 +40,14 @@ function AchievementsPage() {
     }
   }
 
+  const isPremium = subscription?.status === 'active'
+
   const unlockedCount = achievements.filter((a) => a.unlocked).length
   const totalCount = achievements.length
   const progress = totalCount > 0 ? Math.round((unlockedCount / totalCount) * 100) : 0
 
-  // Group by category
+  const premiumCount = achievements.filter((a) => !a.free).length
+
   const grouped = CATEGORY_ORDER.map((cat) => ({
     category: cat,
     label: CATEGORY_LABELS[cat],
@@ -80,6 +86,26 @@ function AchievementsPage() {
         </div>
       </div>
 
+      {/* Premium upsell banner — only for free users */}
+      {!isPremium && (
+        <div className="bg-gradient-to-br from-yellow-500/10 to-brand-purple/10 border border-yellow-500/20 rounded-xl p-4 mb-6 flex items-center justify-between gap-4">
+          <div>
+            <div className="text-sm font-semibold mb-0.5">
+              🔒 {premiumCount} Premium achievements locked
+            </div>
+            <div className="text-xs text-white/50">
+              Upgrade to unlock all achievements and earn bonus XP.
+            </div>
+          </div>
+          <button
+            onClick={() => void window.api.subscription.checkout()}
+            className="flex-shrink-0 text-xs px-4 py-2 rounded-lg bg-brand-purple hover:bg-brand-purple/80 font-semibold transition-colors"
+          >
+            Upgrade — $4.99/mo
+          </button>
+        </div>
+      )}
+
       {/* Categories */}
       {grouped.map((group) => (
         <section key={group.category} className="mb-8">
@@ -88,7 +114,7 @@ function AchievementsPage() {
           </h2>
           <div className="grid grid-cols-2 lg:grid-cols-3 gap-3">
             {group.items.map((a) => (
-              <AchievementCard key={a.key} achievement={a} />
+              <AchievementCard key={a.key} achievement={a} isPremium={isPremium} />
             ))}
           </div>
         </section>
@@ -111,13 +137,45 @@ const RARITY_STYLES: Record<string, { label: string; color: string }> = {
   legendary: { label: 'Legendary', color: 'text-yellow-300' }
 }
 
-function AchievementCard({ achievement }: { achievement: Achievement }) {
+function AchievementCard({
+  achievement,
+  isPremium
+}: {
+  achievement: Achievement
+  isPremium: boolean
+}) {
   const { unlocked, emoji, title, description, rarity, free, unlockedAt } = achievement
+  const isLocked = !free && !isPremium
+
   const date = unlockedAt
     ? new Date(unlockedAt).toLocaleDateString([], { month: 'short', day: 'numeric' })
     : null
   const xp = RARITY_XP_VALUES[rarity] ?? 0
   const rarityMeta = RARITY_STYLES[rarity] ?? RARITY_STYLES.common
+
+  if (isLocked) {
+    return (
+      <div className="relative rounded-xl p-4 border bg-bg-panel border-white/5 opacity-70">
+        {/* Lock overlay */}
+        <div className="absolute inset-0 rounded-xl flex flex-col items-center justify-center bg-black/40 backdrop-blur-[2px] z-10">
+          <div className="text-2xl mb-1">🔒</div>
+          <div className="text-[10px] text-white/50 font-medium">Premium only</div>
+        </div>
+        {/* Blurred content behind */}
+        <div className="blur-sm pointer-events-none select-none">
+          <div className="text-4xl mb-2 grayscale opacity-40">{emoji}</div>
+          <div className="font-semibold text-sm mb-0.5">{title}</div>
+          <div className="text-xs text-white/50 leading-snug mb-2">{description}</div>
+          <div className="flex items-center justify-between mt-2 pt-2 border-t border-white/5">
+            <span className={`text-[10px] uppercase tracking-wider font-medium ${rarityMeta.color}`}>
+              {rarityMeta.label}
+            </span>
+            <span className="text-xs font-bold text-brand-cyan">+{xp} XP</span>
+          </div>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div
@@ -127,7 +185,7 @@ function AchievementCard({ achievement }: { achievement: Achievement }) {
           : 'bg-bg-panel border-white/5 opacity-60'
       }`}
     >
-      {!free && (
+      {!free && isPremium && (
         <div className="absolute top-2 right-2 text-[10px] uppercase tracking-wider font-medium bg-yellow-500/20 text-yellow-300 px-2 py-0.5 rounded-full border border-yellow-500/30">
           Premium
         </div>

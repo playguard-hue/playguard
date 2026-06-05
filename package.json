@@ -1,6 +1,6 @@
 {
   "name": "playguard-app",
-  "version": "1.2.1",
+  "version": "1.4.0",
   "description": "An Electron application with React and TypeScript",
   "main": "./out/main/index.js",
   "author": "example.com",
@@ -27,6 +27,7 @@
     "electron-log": "^5.4.3",
     "electron-store": "^8.2.0",
     "electron-updater": "^6.3.9",
+    "lucide-react": "^1.17.0",
     "uiohook-napi": "^1.5.5",
     "vdf-parser": "^1.2.1"
   },

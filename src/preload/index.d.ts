@@ -198,6 +198,12 @@ export interface ChallengeHistoryItem {
   completed_at: string
 }
 
+export interface SubscriptionInfo {
+  status: 'active' | 'inactive' | 'canceled' | 'past_due' | 'trialing'
+  plan: 'monthly' | 'yearly' | null
+  current_period_end: string | null
+}
+
 export interface Api {
   settings: {
     getAll: () => Promise<AppSettings>
@@ -268,6 +274,14 @@ export interface Api {
     getAll: () => Promise<{ data?: Challenge[]; error?: string }>
     join: (id: string) => Promise<{ data?: unknown; error?: string }>
     getHistory: () => Promise<{ data?: ChallengeHistoryItem[]; error?: string }>
+  }
+  subscription: {
+    get: () => Promise<{ data?: SubscriptionInfo; error?: string }>
+    checkout: () => Promise<{ data?: { url: string }; error?: string }>
+    portal: () => Promise<{ data?: { url: string }; error?: string }>
+  }
+  shell: {
+    openExternal: (url: string) => void
   }
 }
 

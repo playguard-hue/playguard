@@ -387,6 +387,44 @@ app.whenReady().then(() => {
       return { error: msg }
     }
   })
+  // ─── Subscription IPC ─────────────────────────────────────
+  ipcMain.handle('subscription:get', async () => {
+    try {
+      const data = await api.getSubscription()
+      return { data }
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : 'Unknown error'
+      return { error: msg }
+    }
+  })
+
+  ipcMain.handle('subscription:checkout', async () => {
+    try {
+      const data = await api.createCheckoutSession()
+      if (data.url) {
+        await shell.openExternal(data.url)
+      }
+      return { data }
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : 'Unknown error'
+      return { error: msg }
+    }
+  })
+  ipcMain.handle('subscription:portal', async () => {
+    try {
+      const data = await api.createPortalSession()
+      if (data.url) {
+        await shell.openExternal(data.url)
+      }
+      return { data }
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : 'Unknown error'
+      return { error: msg }
+    }
+  })
+  ipcMain.handle('shell:open-external', (_, url: string) => {
+    shell.openExternal(url)
+  })
   // ─── Challenges IPC ───────────────────────────────────────
   ipcMain.handle('challenges:get-all', async () => {
     try {

@@ -88,6 +88,11 @@ export interface ChallengeHistoryItem {
   xp_reward: number
   completed_at: string
 }
+export interface SubscriptionInfo {
+  status: 'active' | 'inactive' | 'canceled' | 'past_due' | 'trialing'
+  plan: 'monthly' | 'yearly' | null
+  current_period_end: string | null
+}
 
 export const api = {
   async postSession(s: {
@@ -133,6 +138,18 @@ export const api = {
 
   async getChallengeHistory(): Promise<ChallengeHistoryItem[]> {
     return request<ChallengeHistoryItem[]>('/challenges/history')
+  },
+
+  async getSubscription(): Promise<SubscriptionInfo> {
+    return request<SubscriptionInfo>('/me/subscription')
+  },
+
+  async createCheckoutSession(): Promise<{ url: string }> {
+    return request<{ url: string }>('/subscriptions/checkout', { method: 'POST' })
+  },
+
+  async createPortalSession(): Promise<{ url: string }> {
+    return request<{ url: string }>('/subscriptions/portal', { method: 'POST' })
   }
 }
 

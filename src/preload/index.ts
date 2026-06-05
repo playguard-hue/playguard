@@ -96,6 +96,14 @@ const api = {
     getAll: () => ipcRenderer.invoke('challenges:get-all'),
     join: (id: string) => ipcRenderer.invoke('challenges:join', id),
     getHistory: () => ipcRenderer.invoke('challenges:get-history')
+  },
+  subscription: {
+    get: () => ipcRenderer.invoke('subscription:get'),
+    checkout: () => ipcRenderer.invoke('subscription:checkout'),
+    portal: () => ipcRenderer.invoke('subscription:portal')
+  },
+  shell: {
+    openExternal: (url: string) => ipcRenderer.invoke('shell:open-external', url)
   }
 }
 
