@@ -6,8 +6,14 @@ import LimitsPage from './pages/LimitsPage'
 import SettingsPage from './pages/SettingsPage'
 import LoginPage from './pages/LoginPage'
 import IntentModals from './components/IntentModals'
+import FocusPage from './pages/FocusPage'
+import AchievementsPage from './pages/AchievementsPage'
+import LeaderboardPage from './pages/LeaderboardPage'
+import ChallengesPage from './pages/ChallengesPage'
+import AchievementToast from './components/AchievementToast'
+import HardInterventionModal from './components/HardInterventionModal'
 
-export type Page = 'home' | 'limits' | 'settings'
+export type Page = 'home' | 'limits' | 'focus' | 'achievements' | 'challenges' | 'leaderboard' | 'settings'
 
 function MainApp() {
   const [currentPage, setCurrentPage] = useState<Page>('home')
@@ -18,6 +24,14 @@ function MainApp() {
         return <HomePage />
       case 'limits':
         return <LimitsPage />
+      case 'focus':
+        return <FocusPage />
+      case 'achievements':
+        return <AchievementsPage />
+      case 'challenges':
+        return <ChallengesPage />
+      case 'leaderboard':
+        return <LeaderboardPage />
       case 'settings':
         return <SettingsPage />
     }
@@ -28,6 +42,8 @@ function MainApp() {
       <Sidebar currentPage={currentPage} onNavigate={setCurrentPage} />
       <main className="flex-1 overflow-y-auto">{renderPage()}</main>
       <IntentModals />
+      <AchievementToast />
+      <HardInterventionModal />
     </div>
   )
 }

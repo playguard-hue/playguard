@@ -17,6 +17,23 @@ import { api } from './apiClient'
 import { registerStressIpc, destroyWorkerWindow } from './stressMonitor'
 import { destroyKeyboardHook } from './keyboardMonitor'
 import { refreshStreak, getStreak } from './streakCalculator'
+import {
+  initFocusManager,
+  startFocusSession,
+  endFocusSession,
+  getActiveFocusSession,
+  getFocusHistory
+} from './focusManager'
+import { stopWindowMonitoring, getRecentAppsSeen, setAppCategory } from './windowMonitor'
+import {
+  ACHIEVEMENTS,
+  getUnlockedAchievements,
+  refreshAchievements,
+  incrementMeta,
+  getUserStats,
+  RARITY_XP,
+  getAchievementDef
+} from './achievements'
 
 let mainWindow: BrowserWindow | null = null
 let tray: Tray | null = null
@@ -77,7 +94,24 @@ autoUpdater.on('update-downloaded', async (info) => {
     autoUpdater.quitAndInstall()
   }
 })
-
+async function syncAchievementsToBackend(): Promise<void> {
+  try {
+    const unlocked = getUnlockedAchievements()
+    if (unlocked.length === 0) return
+    const payload = unlocked.map((u) => {
+      const def = getAchievementDef(u.key)
+      return {
+        key: u.key,
+        xp: def ? RARITY_XP[def.rarity] : 0,
+        unlocked_at: u.unlockedAt
+      }
+    })
+    await api.syncAchievements(payload)
+    log.info('[achievements] Synced to backend:', payload.length)
+  } catch (err) {
+    log.warn('[achievements] Sync to backend failed:', err)
+  }
+}
 function checkForUpdates(): void {
   if (is.dev) {
     log.info('[updater] Skipped — dev mode')
@@ -190,6 +224,9 @@ app.whenReady().then(() => {
   // Register IPC handlers for stress monitor (must be before session start)
   registerStressIpc()
 
+  // Initialize focus manager (subscribes to window changes)
+  initFocusManager()
+
   try {
     startSessionManager()
   } catch (err) {
@@ -283,6 +320,114 @@ app.whenReady().then(() => {
 // ─── Streak IPC ───────────────────────────────────────────
   ipcMain.handle('streak:get', () => getStreak())
   ipcMain.handle('streak:refresh', async () => refreshStreak())
+  // ─── Focus Mode IPC ───────────────────────────────────────
+  ipcMain.handle('focus:start', (_e, intent: string, plannedMinutes: number) => {
+    return startFocusSession(intent, plannedMinutes)
+  })
+  ipcMain.handle('focus:end', (_e, reflection: 'completed' | 'partial' | 'failed') => {
+    return endFocusSession(reflection)
+  })
+  ipcMain.handle('focus:get-active', () => getActiveFocusSession())
+  ipcMain.handle('focus:get-history', () => getFocusHistory())
+
+  // ─── Daily Intent IPC ─────────────────────────────────────
+  ipcMain.handle('dailyIntent:get', () => store.get('dailyIntent'))
+  ipcMain.handle(
+    'dailyIntent:set',
+    (_e, priority: string, energy: 'low' | 'normal' | 'high', gamingBudgetMinutes: number) => {
+      const today = new Date().toISOString().slice(0, 10) // YYYY-MM-DD
+      const updated = {
+        date: today,
+        priority,
+        energy,
+        gamingBudgetMinutes
+      }
+      store.set('dailyIntent', updated)
+      return updated
+    }
+  )
+  ipcMain.handle('dailyIntent:should-ask', () => {
+    const intent = store.get('dailyIntent')
+    const today = new Date().toISOString().slice(0, 10)
+    return intent.date !== today
+  })
+  // ─── Achievements IPC ─────────────────────────────────────
+  ipcMain.handle('achievements:get-all', () => {
+    const unlocked = getUnlockedAchievements()
+    return ACHIEVEMENTS.map((def) => {
+      const found = unlocked.find((u) => u.key === def.key)
+      return {
+        ...def,
+        unlocked: !!found,
+        unlockedAt: found?.unlockedAt ?? null
+      }
+    })
+  })
+  ipcMain.handle('achievements:refresh', async () => {
+    await refreshAchievements()
+    return true
+  })
+  ipcMain.handle(
+    'achievements:increment-meta',
+    (_e, key: 'preSessionIntents' | 'postReflections' | 'hydrationAck' | 'stretchAck') => {
+      incrementMeta(key)
+      return true
+    }
+  )
+  ipcMain.handle('achievements:get-stats', () => {
+    return getUserStats()
+  })
+  // ─── Leaderboard IPC ──────────────────────────────────────
+  ipcMain.handle('leaderboard:get', async () => {
+    try {
+      const data = await api.getLeaderboard()
+      return { data }
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : 'Unknown error'
+      return { error: msg }
+    }
+  })
+  // ─── Challenges IPC ───────────────────────────────────────
+  ipcMain.handle('challenges:get-all', async () => {
+    try {
+      const data = await api.getChallenges()
+      return { data }
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : 'Unknown error'
+      return { error: msg }
+    }
+  })
+
+  ipcMain.handle('challenges:join', async (_e, id: string) => {
+    try {
+      const data = await api.joinChallenge(id)
+      return { data }
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : 'Unknown error'
+      return { error: msg }
+    }
+  })
+
+  ipcMain.handle('challenges:get-history', async () => {
+    try {
+      const data = await api.getChallengeHistory()
+      return { data }
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : 'Unknown error'
+      return { error: msg }
+    }
+  })
+  // ─── App categories IPC ───────────────────────────────────
+  ipcMain.handle('appCategories:get-all', () => {
+    return getRecentAppsSeen()
+  })
+  ipcMain.handle(
+    'appCategories:set',
+    (_e, exeName: string, category: string) => {
+      setAppCategory(exeName, category as 'work' | 'communication' | 'email' | 'browser' | 'design' | 'meetings' | 'media' | 'games' | 'system' | 'other')
+      return true
+    }
+  )
   // ─── Window + tray ────────────────────────────────────────
   createTray()
   if (!startedHidden) {
@@ -298,6 +443,16 @@ app.whenReady().then(() => {
   // Refresh streak after app settles, then every hour
   setTimeout(() => void refreshStreak(), 5_000)
   setInterval(() => void refreshStreak(), 60 * 60 * 1000)
+
+  // Refresh achievements after streak settles
+  setTimeout(async () => {
+    await refreshAchievements()
+    await syncAchievementsToBackend()
+  }, 8_000)
+  setInterval(async () => {
+    await refreshAchievements()
+    await syncAchievementsToBackend()
+  }, 60 * 60 * 1000)
 
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) createWindow()
@@ -330,10 +485,12 @@ app.on('before-quit', async (event) => {
     tray?.destroy()
     destroyWorkerWindow()
     destroyKeyboardHook()
+    stopWindowMonitoring()
     app.quit()
     return
   }
   tray?.destroy()
   destroyWorkerWindow()
   destroyKeyboardHook()
+  stopWindowMonitoring()
 })

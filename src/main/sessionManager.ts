@@ -13,6 +13,7 @@ import {
   stopKeyboardMonitoring
 } from './keyboardMonitor'
 import { refreshStreak } from './streakCalculator'
+import { trackGameSession, refreshActiveChallenges } from './challengeTracker'
 
 let dailyLimitWarned = false
 let sessionLimitWarned = false
@@ -199,6 +200,20 @@ function broadcastReflectionPrompt(meta: SessionMeta): void {
     win.webContents.send('intent:ask-after', meta)
   }
 }
+async function trackChallengesForCompletedSession(session: CompletedSession): Promise<void> {
+  const dailyIntent = store.get('dailyIntent')
+  const today = new Date(session.endedAt).toISOString().slice(0, 10)
+  const hadPreIntent = dailyIntent.date === today && !!dailyIntent.priority
+  // Post-reflection is tracked via incrementMeta when user submits the reflection modal.
+  // For challenge purposes, we conservatively consider it true if pre-intent exists
+  // (the modal will appear and most users complete it).
+  const hadPostReflection = hadPreIntent
+  try {
+    await trackGameSession(session, { hadPreIntent, hadPostReflection })
+  } catch (err) {
+    console.error('[SessionManager] Challenge tracking failed:', err)
+  }
+}
 
 async function saveCompletedSession(session: CompletedSession): Promise<void> {
   const existing = (store.get('pendingSessions') as CompletedSession[]) ?? []
@@ -307,6 +322,7 @@ async function tick(): Promise<void> {
       durationSeconds: Math.round((ended - activeSession.startedAt) / 1000)
     }
     void saveCompletedSession(completed)
+    void trackChallengesForCompletedSession(completed)
     sessionLimitWarned = false
     const closingMeta: SessionMeta = {
       appId: activeSession.appId,
@@ -336,6 +352,7 @@ async function tick(): Promise<void> {
       durationSeconds: Math.round((ended - activeSession.startedAt) / 1000)
     }
     void saveCompletedSession(completed)
+    void trackChallengesForCompletedSession(completed)
 
     activeSession = {
       appId: detected.appId,
@@ -362,6 +379,7 @@ export function startSessionManager(): void {
   if (pollInterval) return
   onStressEvent(handleStressEvent)
   void tick()
+  void refreshActiveChallenges()
   pollInterval = setInterval(() => void tick(), POLL_INTERVAL_MS)
 }
 

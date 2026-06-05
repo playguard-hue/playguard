@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { useAuth } from '../contexts/AuthContext'
 import logo from '../assets/Logo.png'
 import type { Page } from '../App'
+import type { UserStats } from '../../../preload/index.d'
 
 interface SidebarProps {
   currentPage: Page
@@ -17,12 +18,17 @@ interface NavItem {
 const navItems: NavItem[] = [
   { id: 'home', label: 'Home', icon: '⌂' },
   { id: 'limits', label: 'Limits', icon: '⏱' },
+  { id: 'focus', label: 'Focus', icon: '🎯' },
+  { id: 'achievements', label: 'Achievements', icon: '🏆' },
+  { id: 'challenges', label: 'Challenges', icon: '⚔' },
+  { id: 'leaderboard', label: 'Leaderboard', icon: '📊' },
   { id: 'settings', label: 'Settings', icon: '⚙' }
 ]
 
 function Sidebar({ currentPage, onNavigate }: SidebarProps) {
   const { user, logout } = useAuth()
   const [version, setVersion] = useState('—')
+  const [stats, setStats] = useState<UserStats | null>(null)
 
   useEffect(() => {
     if (!window.api?.app?.getVersion) {
@@ -33,14 +39,27 @@ function Sidebar({ currentPage, onNavigate }: SidebarProps) {
     window.api.app
       .getVersion()
       .then((v) => {
-        console.log('[Sidebar] Got version:', v)
         setVersion(v || '?')
       })
-      .catch((err) => {
-        console.error('[Sidebar] getVersion failed:', err)
-        setVersion('?')
-      })
+      .catch(() => setVersion('?'))
   }, [])
+
+  // Load stats + listen for unlock events
+  useEffect(() => {
+    const load = (): void => {
+      void window.api.achievements
+        .getStats()
+        .then(setStats)
+        .catch(() => undefined)
+    }
+    load()
+    const unsub = window.api.achievements.onUnlocked(() => load())
+    return unsub
+  }, [])
+
+  const xpPercent = stats
+    ? Math.min(100, Math.round((stats.currentXp / stats.xpForNext) * 100))
+    : 0
 
   return (
     <aside className="w-60 bg-bg-panel border-r border-white/5 flex flex-col">
@@ -78,6 +97,33 @@ function Sidebar({ currentPage, onNavigate }: SidebarProps) {
           )
         })}
       </nav>
+
+      {/* Level badge */}
+      {stats && (
+        <button
+          onClick={() => onNavigate('achievements')}
+          className="mx-3 mb-3 p-3 rounded-lg bg-gradient-to-br from-brand-purple/15 to-brand-cyan/10 border border-brand-purple/30 hover:border-brand-purple/50 transition-colors text-left"
+        >
+          <div className="flex items-center justify-between mb-1.5">
+            <div className="flex items-center gap-2">
+              <span className="text-sm">⭐</span>
+              <span className="text-sm font-semibold">Level {stats.level}</span>
+            </div>
+            <span className="text-[10px] text-white/50 font-medium">
+              {stats.totalXp} XP
+            </span>
+          </div>
+          <div className="h-1.5 bg-white/5 rounded-full overflow-hidden">
+            <div
+              className="h-full bg-gradient-to-r from-brand-purple to-brand-cyan transition-all"
+              style={{ width: `${xpPercent}%` }}
+            />
+          </div>
+          <div className="text-[10px] text-white/40 mt-1.5">
+            {stats.currentXp} / {stats.xpForNext} to next level
+          </div>
+        </button>
+      )}
 
       {/* User section */}
       <div className="p-3 border-t border-white/5">

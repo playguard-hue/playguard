@@ -114,6 +114,7 @@ function HomePage() {
         </div>
       )}
 
+
       {/* Current session */}
       <div className="bg-bg-panel border border-white/5 rounded-xl p-6">
         <div className="flex items-center justify-between mb-4">

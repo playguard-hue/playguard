@@ -59,6 +59,36 @@ export interface BackendStats {
   today_seconds: number
 }
 
+export interface LeaderboardEntry {
+  username: string
+  total_xp: number
+  current_level: number
+  achievements_count: number
+}
+
+export interface Challenge {
+  id: string
+  title: string
+  description: string
+  type: string
+  goal_type: string
+  goal_value: number
+  duration_days: number
+  xp_reward: number
+  emoji: string
+  user_challenge_id: string | null
+  expires_at: string | null
+  current_progress: number | null
+  completed: boolean | null
+}
+
+export interface ChallengeHistoryItem {
+  title: string
+  emoji: string
+  xp_reward: number
+  completed_at: string
+}
+
 export const api = {
   async postSession(s: {
     game: string
@@ -76,6 +106,33 @@ export const api = {
 
   async getStats(): Promise<BackendStats> {
     return request<BackendStats>('/stats')
+  },
+
+  async syncAchievements(achievements: Array<{ key: string; xp: number; unlocked_at: number }>): Promise<void> {
+    await request('/achievements/sync', {
+      method: 'POST',
+      body: { achievements: achievements.map(a => ({ ...a, unlocked_at: new Date(a.unlocked_at).toISOString() })) }
+    })
+  },
+
+  async getLeaderboard(): Promise<LeaderboardEntry[]> {
+    return request<LeaderboardEntry[]>('/leaderboard?type=global')
+  },
+
+  async getChallenges(): Promise<Challenge[]> {
+    return request<Challenge[]>('/challenges')
+  },
+
+  async joinChallenge(id: string): Promise<unknown> {
+    return request(`/challenges/${id}/join`, { method: 'POST' })
+  },
+
+  async updateChallengeProgress(userChallengeId: string, progress: number): Promise<unknown> {
+    return request(`/challenges/${userChallengeId}/progress`, { method: 'POST', body: { progress } })
+  },
+
+  async getChallengeHistory(): Promise<ChallengeHistoryItem[]> {
+    return request<ChallengeHistoryItem[]>('/challenges/history')
   }
 }
 

@@ -45,6 +45,57 @@ const api = {
   streak: {
     get: () => ipcRenderer.invoke('streak:get'),
     refresh: () => ipcRenderer.invoke('streak:refresh')
+  },
+  focus: {
+    start: (intent: string, plannedMinutes: number) =>
+      ipcRenderer.invoke('focus:start', intent, plannedMinutes),
+    end: (reflection: 'completed' | 'partial' | 'failed') =>
+      ipcRenderer.invoke('focus:end', reflection),
+    getActive: () => ipcRenderer.invoke('focus:get-active'),
+    getHistory: () => ipcRenderer.invoke('focus:get-history'),
+    onUpdate: (callback: (session: unknown) => void) => {
+      const handler = (_e: unknown, session: unknown): void => callback(session)
+      ipcRenderer.on('focus:update', handler)
+      return () => ipcRenderer.removeListener('focus:update', handler)
+    }
+  },
+  dailyIntent: {
+    get: () => ipcRenderer.invoke('dailyIntent:get'),
+    set: (priority: string, energy: string, gamingBudgetMinutes: number) =>
+      ipcRenderer.invoke('dailyIntent:set', priority, energy, gamingBudgetMinutes),
+    shouldAsk: () => ipcRenderer.invoke('dailyIntent:should-ask')
+  },
+  achievements: {
+    getAll: () => ipcRenderer.invoke('achievements:get-all'),
+    refresh: () => ipcRenderer.invoke('achievements:refresh'),
+    getStats: () => ipcRenderer.invoke('achievements:get-stats'),
+    incrementMeta: (key: 'preSessionIntents' | 'postReflections' | 'hydrationAck' | 'stretchAck') =>
+      ipcRenderer.invoke('achievements:increment-meta', key),
+    onUnlocked: (callback: (data: unknown) => void) => {
+      const handler = (_e: unknown, data: unknown): void => callback(data)
+      ipcRenderer.on('achievement:unlocked', handler)
+      return () => ipcRenderer.removeListener('achievement:unlocked', handler)
+    }
+  },
+  appCategories: {
+    getAll: () => ipcRenderer.invoke('appCategories:get-all'),
+    set: (exeName: string, category: string) =>
+      ipcRenderer.invoke('appCategories:set', exeName, category)
+  },
+  focusHardIntervention: {
+    onTriggered: (callback: (data: unknown) => void) => {
+      const handler = (_e: unknown, data: unknown): void => callback(data)
+      ipcRenderer.on('focus:hard-intervention', handler)
+      return () => ipcRenderer.removeListener('focus:hard-intervention', handler)
+    }
+  },
+  leaderboard: {
+    get: () => ipcRenderer.invoke('leaderboard:get')
+  },
+  challenges: {
+    getAll: () => ipcRenderer.invoke('challenges:get-all'),
+    join: (id: string) => ipcRenderer.invoke('challenges:join', id),
+    getHistory: () => ipcRenderer.invoke('challenges:get-history')
   }
 }
 

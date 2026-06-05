@@ -1,5 +1,7 @@
 import Store from 'electron-store'
 
+export type AppCategoryOverride = 'work' | 'communication' | 'email' | 'browser' | 'design' | 'meetings' | 'media' | 'games' | 'system' | 'other'
+
 export interface AppSettings {
   audio: {
     microphoneId: string
@@ -37,6 +39,18 @@ export interface AppSettings {
     askBeforeSession: boolean
     askAfterSession: boolean
   }
+  dailyIntent: {
+    date: string
+    priority: string
+    energy: 'low' | 'normal' | 'high'
+    gamingBudgetMinutes: number
+  }
+  ui: {
+    focusBannerDismissed: boolean
+    focusBannerSeenCount: number
+  }
+  customAppCategories: Record<string, AppCategoryOverride>
+  challengeCoolStreak: number
 }
 
 const defaults: AppSettings = {
@@ -71,7 +85,19 @@ const defaults: AppSettings = {
   intent: {
     askBeforeSession: true,
     askAfterSession: true
-  }
+  },
+  dailyIntent: {
+    date: '',
+    priority: '',
+    energy: 'normal',
+    gamingBudgetMinutes: 60
+  },
+  ui: {
+    focusBannerDismissed: false,
+    focusBannerSeenCount: 0
+  },
+  customAppCategories: {},
+  challengeCoolStreak: 0
 }
 
 export const store = new Store<AppSettings>({
